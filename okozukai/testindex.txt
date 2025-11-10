@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>しっかり！おこづかいライフ</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: "Rounded Mplus 1c", "Yu Gothic", sans-serif;
+  background: url('bg/default.jpg') no-repeat center center fixed;
+  background-size: cover;
+  color: #333;
+  text-align: center;
+  transition: background-image 1s ease-in-out;
+}
+#title {
+  height: 100vh;
+  background: linear-gradient(to bottom, #87cefa, #b3e5ff);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+#title h1 {
+  font-size: 2.4em;
+  animation: floatTitle 4s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(0,0,0,0.2);
+}
+@keyframes floatTitle {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+#startBtn {
+  background: white;
+  border: none;
+  border-radius: 30px;
+  padding: 15px 40px;
+  margin-top: 40px;
+  font-size: 1.2em;
+  color: #3498db;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  cursor: pointer;
+  animation: floatBtn 3.5s ease-in-out infinite;
+}
+@keyframes floatBtn {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+#game {
+  display: none;
+  max-width: 480px;
+  margin: 0 auto;
+  margin-top: 20px;
+  background: rgba(255,255,255,0.85);
+  border-radius: 15px;
+  padding: 20px;
+}
+button {
+  background-color: #ffb84c;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  padding: 10px 20px;
+  margin: 10px;
+  cursor: pointer;
+  font-size: 16px;
+}
+button:hover { background-color: #ffa733; }
+.stats {
+  background: rgba(255,255,255,0.6);
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 15px;
+}
+</style>
+</head>
+<body>
+
+<div id="title">
+  <h1>しっかり！おこづかいライフ</h1>
+  <button id="startBtn">はじめる！</button>
+</div>
+
+<div id="game">
+  <p id="text"></p>
+  <div id="choices"></div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<audio id="bgm-main" src="bgm/main.mp3" loop></audio>
+<audio id="bgm-event" src="bgm/event.mp3" loop></audio>
+<audio id="bgm-luxury" src="bgm/luxury.mp3" loop></audio>
+<audio id="se-click" src="se/click.mp3"></audio>
+<audio id="se-buy" src="se/buy.mp3"></audio>
+<audio id="se-success" src="se/success.mp3"></audio>
+<audio id="se-end" src="se/end.mp3"></audio>
+
+<script>
+let month = 4;
+let money = 0;
+let happy = 0;
+let specialGift = false;
+let switchBought = false;
+
+const months = ["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"];
+
+document.getElementById("startBtn").onclick = () => {
+  playSe("click");
+  document.getElementById("title").style.display = "none";
+  document.getElementById("game").style.display = "block";
+  playBgm("main");
+  startGame();
+};
+
+function playBgm(type){
+  ["main","event","luxury"].forEach(id=>{
+    const a=document.getElementById("bgm-"+id);
+    a.pause(); a.currentTime=0;
+  });
+  const bg=document.getElementById("bgm-"+type);
+  if(bg){ bg.volume=0.5; bg.play().catch(()=>{}); }
+}
+function playSe(id){
+  const s=document.getElementById("se-"+id);
+  if(s){ s.currentTime=0; s.play().catch(()=>{}); }
+}
+
+function setSeasonBackground(month, eventType="normal"){
+  let file = `bg/${month}${eventType==="event"?"_event":""}.jpg`;
+  document.body.style.backgroundImage = `url('${file}')`;
+}
+
+function show(text, choices=[]){
+  const t=document.getElementById("text");
+  const c=document.getElementById("choices");
+  t.innerHTML=text.replace(/\n/g,"<br>");
+  c.innerHTML="";
+  choices.forEach(opt=>{
+    const b=document.createElement("button");
+    b.textContent=opt.text;
+    b.onclick=()=>{ playSe("click"); opt.action(); };
+    c.appendChild(b);
+  });
+  document.getElementById("stats").innerHTML=`📅${months[month-4]}<br>💰${money}円<br>😊幸福度:${happy}`;
+}
+
+function startGame(){
+  show("🌸新しい1年がはじまります！\n計画的におこづかいを使ってしあわせな1年をめざそう！",[{
+    text:"スタート！", action:nextMonth
+  }]);
+}
+
+function nextMonth(){
+  if(month>15){endGame();return;}
+  setSeasonBackground(month);
+  show(`🌙 ${months[month-4]}になった！`,[{text:"月初イベントへ",action:randomEvent}]);
+}
+
+function randomEvent(){
+  const r=Math.random();
+  let msg="";
+  if(r<0.2){msg="👨‍🦱おじさんが臨時おこづかいをくれた！(+10000円,幸福度+10)";money+=10000;happy+=10;}
+  else if(r<0.5){msg="👮お財布を届けて500円もらった！(+500円,幸福度+5)";money+=500;happy+=5;}
+  else if(r<0.8){msg="👩ママのお手伝いをがんばって1000円！(+1000円,幸福度+7)";money+=1000;happy+=7;}
+  else {msg="特に何も起こらなかった。";}
+  show(msg,[{text:"お小遣いへ",action:monthlyAllowance}]);
+}
+
+function monthlyAllowance(){
+  money+=3000;
+  show("💰今月のおこづかい3000円をもらった！",[{text:"どこへ行く？",action:chooseShop}]);
+}
+
+function chooseShop(){
+  show("🏙️どこに行く？",[ 
+    {text:"おもちゃ屋へ",action:toyShop},
+    {text:"デパートへ",action:departmentStore},
+    {text:"やめる",action:monthEvent}
+  ]);
+}
+
+function toyShop(){
+  playBgm("event");
+  show("🧸おもちゃ屋に来た！",[ 
+    {text:"ニンテンドースイッチ(18000円)",action:()=>buyItem("switch",18000,30)},
+    {text:"ゲームソフト(2000円)",action:()=>buyItem("game",2000,8)},
+    {text:"UFOキャッチャーで遊ぶ(500円)",action:()=>buyItem("ufo",500,3)},
+    {text:"やめる",action:chooseShop}
+  ]);
+}
+
+function departmentStore(){
+  playBgm("event");
+  show("🛍️デパートに来た！",[ 
+    {text:"かわいい服(5000円)",action:()=>buyItem("clothes",5000,10)},
+    {text:"プリキュアのおもちゃ(2000円)",action:()=>buyItem("toy",2000,5)},
+    {text:"プレゼント(3000円)",action:()=>buyItem("gift",3000,8)},
+    {text:"お菓子の詰め合わせ(1000円)",action:()=>buyItem("sweets",1000,4)},
+    {text:"やめる",action:chooseShop}
+  ]);
+}
+
+function buyItem(name, price, happyPlus){
+  if(money>=price){
+    money-=price;
+    happy+=happyPlus;
+    playSe("buy");
+    if(name==="switch")switchBought=true;
+    show(`🛒${price}円で${name==="switch"?"ニンテンドースイッチ":"アイテム"}を買った！幸福度+${happyPlus}`,[{text:"戻る",action:chooseShop}]);
+  }else{
+    playSe("end");
+    show("💦お金が足りない…",[ {text:"戻る",action:chooseShop} ]);
+  }
+}
+
+function monthEvent(){
+  let msg="",eventType="normal";
+  switch(month){
+    case 4:
+      money+=2000;
+      msg="🌸入学祝いで2000円もらった！";
+      eventType="event";
+      break;
+    case 5:
+      eventType="event";
+      show("💐母の日です。カーネーションを買いますか？",[{
+        text:"買う（2000円）",action:()=>{
+          if(money>=2000){money-=2000;happy+=10;playSe("buy");
+            show("💐お母さんがとても喜んでくれた！幸福度+10",[{
+              text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+            }]);
+          }else{
+            playSe("end");
+            show("💦お金が足りなくて買えなかった…",[{
+              text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+            }]);
+          }
+        }},
+        {text:"買わない",action:()=>{
+          show("🤔ちょっと申し訳ない気持ちになった。",[{
+            text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+          }]);
+        }}
+      ]);
+      return;
+    case 6: msg="☔雨の日が多くてちょっと憂うつ。";happy+=1;break;
+    case 7:
+      eventType="event";
+      show("🍦夏休み！アイスを買って食べますか？",[
+        {text:"食べる（300円）",action:()=>{
+          if(money>=300){money-=300;happy+=6;playSe("buy");
+            show("🍧アイスおいしい！幸福度+6",[{
+              text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+            }]);
+          }else{
+            playSe("end");
+            show("💦お金が足りなくて買えなかった…",[{
+              text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+            }]);
+          }
+        }},
+        {text:"やめる",action:()=>{
+          show("☀️節約して我慢した。",[{
+            text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+          }]);
+        }}
+      ]);
+      return;
+    case 8:money+=1000;msg="🏠祖父の家でおこづかい1000円！";eventType="event";break;
+    case 9:msg="🍁秋の気配を感じる。のんびり過ごした。幸福度+2";happy+=2;break;
+    case 10:happy+=5;msg="🎃ハロウィンでお菓子パーティ！幸福度+5";eventType="event";break;
+    case 11:msg="🍂紅葉がきれいな季節。幸福度+2";happy+=2;break;
+    case 12:
+      eventType="event";
+      show("🎄クリスマス！ずっと欲しかったものを買いますか？",[{
+        text:"買う（20000円）",action:()=>{
+          if(money>=20000){money-=20000;happy+=50;specialGift=true;playBgm("luxury");
+            show("🎁夢がかなった！幸福度+50",[{
+              text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+            }]);
+          }else{
+            playSe("end");
+            show("💦お金が足りなくて買えなかった…",[{
+              text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+            }]);
+          }
+        }},
+        {text:"やめる",action:()=>{
+          show("🎅今年はがまんして来年に期待！",[{
+            text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+          }]);
+        }}
+      ]);
+      return;
+    case 1:money+=10000;msg="🎍お正月！お年玉10000円！";eventType="event";break;
+    case 2:
+      eventType="event";
+      show("🍫バレンタインです。チョコを買って友達と食べますか？",[
+        {text:"買う（1000円）",action:()=>{
+          if(money>=1000){money-=1000;happy+=10;playSe("buy");
+            show("🍫友達とチョコを食べて楽しかった！幸福度+10",[{
+              text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+            }]);
+          }else{
+            playSe("end");
+            show("💦お金が足りなくて買えなかった…",[{
+              text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+            }]);
+          }
+        }},
+        {text:"買わない",action:()=>{
+          show("🍀お金を節約した。",[{
+            text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}
+          }]);
+        }}
+      ]);
+      return;
+    case 3:msg="🌸卒業の季節。来年もがんばろう！幸福度+5";happy+=5;break;
+  }
+  setSeasonBackground(month,eventType);
+  show(msg,[{text:"次の月へ",action:()=>{month++;playBgm("main");nextMonth();}}]);
+}
+
+function endGame(){
+  playBgm("luxury");
+  playSe("end");
+  let end="";
+  if(specialGift)end="🎁夢がかなった特別な一年！";
+  else if(switchBought)end="🎮スイッチライフエンド！";
+  else if(happy>=150 && money>=30000)end="🌟最高の一年！";
+  else if(happy>=150)end="😊しあわせいっぱいエンド！";
+  else if(money>=30000)end="💰しっかり貯めたエンド！";
+  else end="🌙ふつうの一年だった。";
+  show(`🏁エンディング<br>${end}<br><br>💰${money}円<br>😊幸福度:${happy}`,[{text:"もう一度あそぶ",action:()=>location.reload()}]);
+}
+</script>
+</body>
+</html>
